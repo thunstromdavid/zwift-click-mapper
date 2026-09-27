@@ -380,7 +380,9 @@ async def connect_once(cfg, mapper):
     if overlay:
         overlay.set_connecting(device.name, device.address)
 
-    async with BleakClient(device.address) as client:
+    client = BleakClient(device.address)
+    try:
+        await client.connect()
         await client.start_notify(NOTIFY_CHAR, mapper.handle)
         for msg in HANDSHAKE:
             await client.write_gatt_char(
@@ -402,6 +404,21 @@ async def connect_once(cfg, mapper):
                 WRITE_CHAR, bytearray.fromhex(KEEPALIVE), response=False
             )
             await asyncio.sleep(5)
+
+    except asyncio.CancelledError:
+        print("Connection cancelled.")
+    except Exception as e:
+        print(f"Connection error during session: {e}")
+    finally:
+        # Clean disconnect so the controller doesn't hang
+        try:
+            if client.is_connected:
+                await client.stop_notify(NOTIFY_CHAR)
+                await client.disconnect()
+                print("Cleanly disconnected from controller.")
+        except Exception as e:
+            print(f"Error during disconnect: {e}")
+
     return True
 
 
