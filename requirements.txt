@@ -1,0 +1,3 @@
+bleak>=0.22
+pydirectinput>=1.0.4; sys_platform == "win32"
+pynput>=1.7; sys_platform != "win32"
